@@ -2,6 +2,7 @@ const { response, request } = require('express');
 const jwt = require('jsonwebtoken');
 
 const Usuario = require('../models/usuario');
+const Curso = require('../models/curso');
 
 const validarJWT = async( req = request, res= response, next ) => {
 
@@ -50,6 +51,52 @@ const validarJWT = async( req = request, res= response, next ) => {
 
 }
 
+const validarJWTCurso = async( req = request, res= response, next ) => {
+
+    const token = req.header('x-token');
+
+    //Si no viene el token
+    if ( !token ) {
+        return res.status(401).json({
+            msg: 'No hay token en la petición'
+        })
+    }
+
+    try {
+
+        const { uid } = jwt.verify( token, process.env.SECRET_KEY_FOR_TOKEN);
+       
+        // leer al usuario que corresponda el uid
+        const curso = await Curso.findById( uid );
+        
+        //Verificar si el uid del usuario no existe
+        if ( !curso ) {
+            return res.status(401).json({
+                msg: 'Token no valido - usuario no existe en DB fisicamente'
+            })
+        }
+  
+        if ( !curso.estado ) {
+            return res.status(401).json({
+                msg: 'Token no valido - usuario con estado: false'
+            })
+        }
+
+
+        req.usuario = curso;
+        next();
+        
+    } catch (error) {
+        console.log(error);
+        res.status(401).json({
+            msg: 'Token no válido'
+        })
+    }
+
+
+}
+
 module.exports = {
-    validarJWT
+    validarJWT,
+    validarJWTCurso
 }
